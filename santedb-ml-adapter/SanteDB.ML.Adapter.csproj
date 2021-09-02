@@ -4,7 +4,6 @@
     <TargetFramework>net5.0</TargetFramework>
     <RootNamespace>SanteDB.ML.Adapter</RootNamespace>
     <CopyRefAssembliesToPublishDirectory>false</CopyRefAssembliesToPublishDirectory>
-    <UserSecretsId>696b2f2a-f643-4b78-9eb6-8cae5b3ea27c</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <AssemblyName>SanteDB.ML.Adapter</AssemblyName>
   </PropertyGroup>
@@ -25,7 +24,5 @@
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.11.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.1" />
   </ItemGroup>
-
-  <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
-
+  
 </Project>
