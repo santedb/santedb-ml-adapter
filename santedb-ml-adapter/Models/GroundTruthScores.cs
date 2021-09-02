@@ -33,8 +33,8 @@ namespace SanteDB.ML.Adapter.Models
 		/// </summary>
 		public GroundTruthScores()
 		{
-			this.Matches = new List<double>();
-			this.NonMatches = new List<double>();
+			this.Matches = new List<decimal?>();
+			this.NonMatches = new List<decimal?>();
 		}
 
 		/// <summary>
@@ -42,13 +42,13 @@ namespace SanteDB.ML.Adapter.Models
 		/// </summary>
 		/// <value>The matches.</value>
 		[JsonPropertyName("1")]
-		public List<double> Matches { get; set; }
+		public List<decimal?> Matches { get; set; }
 
 		/// <summary>
 		/// Gets or sets the non matches.
 		/// </summary>
 		/// <value>The non matches.</value>
 		[JsonPropertyName("0")]
-		public List<double> NonMatches { get; set; }
+		public List<decimal?> NonMatches { get; set; }
 	}
 }

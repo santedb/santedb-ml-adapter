@@ -19,21 +19,12 @@
  * Date: 2021-9-2
  */
 
-using SanteDB.ML.Adapter.Models;
-using System.Threading.Tasks;
-
 namespace SanteDB.ML.Adapter.Services
 {
 	/// <summary>
-	/// Represents a SanteDB ground truth service.
+	/// Represents a SanteDB authentication service.
 	/// </summary>
-	public interface ISanteGroundTruthService
+	public interface ISanteAuthenticationService
 	{
-		/// <summary>
-		/// Gets ground truth scores asynchronously.
-		/// </summary>
-		/// <param name="id">The id of the match configuration.</param>
-		/// <returns>Returns the ground truth scores.</returns>
-		public Task<GroundTruthScores> GetGroundTruthScoresAsync(string id);
 	}
 }

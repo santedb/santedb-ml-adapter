@@ -20,7 +20,6 @@
  */
 using Microsoft.Extensions.Logging;
 using SanteDB.ML.Adapter.Models;
-using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -42,24 +41,36 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		private readonly ILogger<SanteGroundTruthService> logger;
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="SanteGroundTruthService"/> class.
+		/// The FHIR map service.
+		/// </summary>
+		private readonly ISanteFhirMapService fhirMapService;
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="SanteGroundTruthService" /> class.
 		/// </summary>
 		/// <param name="httpClientFactory">The HTTP client factory.</param>
 		/// <param name="logger">The logger.</param>
-		public SanteGroundTruthService(IHttpClientFactory httpClientFactory, ILogger<SanteGroundTruthService> logger)
+		/// <param name="fhirMapService">The FHIR map service.</param>
+		public SanteGroundTruthService(IHttpClientFactory httpClientFactory, ILogger<SanteGroundTruthService> logger, ISanteFhirMapService fhirMapService)
 		{
 			this.httpClientFactory = httpClientFactory;
 			this.logger = logger;
+			this.fhirMapService = fhirMapService;
+
 		}
 
 		/// <summary>
 		/// Gets ground truth scores asynchronously.
 		/// </summary>
-		/// <param name="matchConfigurationId">The id of the match configuration.</param>
+		/// <param name="id">The id of the match configuration.</param>
 		/// <returns>Returns the ground truth scores.</returns>
-		public Task<GroundTruthScores> GetGroundTruthScoresAsync(string matchConfigurationId)
+		public async Task<GroundTruthScores> GetGroundTruthScoresAsync(string id)
 		{
-			throw new NotImplementedException();
+			await Task.Yield();
+
+			var test = this.fhirMapService.MapGroundTruthScores(null);
+
+			return test;
 		}
 	}
 }

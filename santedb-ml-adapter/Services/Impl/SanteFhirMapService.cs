@@ -18,6 +18,13 @@
  * User: khannan
  * Date: 2021-9-2
  */
+
+using Hl7.Fhir.Model;
+using SanteDB.ML.Adapter.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace SanteDB.ML.Adapter.Services.Impl
 {
 	/// <summary>
@@ -25,5 +32,127 @@ namespace SanteDB.ML.Adapter.Services.Impl
 	/// </summary>
 	public class SanteFhirMapService : ISanteFhirMapService
 	{
+		/// <summary>
+		/// The link key.
+		/// </summary>
+		private const string LinkKey = "link";
+
+		/// <summary>
+		/// The match result key.
+		/// </summary>
+		private const string MatchResultKey = "matchResult";
+
+		/// <summary>
+		/// The match key.
+		/// </summary>
+		private const string MatchKey = "MATCH";
+
+		/// <summary>
+		/// The non match key.
+		/// </summary>
+		private const string NonMatchKey = "NON_MATCH";
+
+		/// <summary>
+		/// The score key
+		/// </summary>
+		private const string ScoreKey = "score";
+
+		/// <summary>
+		/// Maps ground truth scores.
+		/// </summary>
+		/// <param name="parameters">The parameters.</param>
+		/// <returns>Returns the mapped ground truth scores.</returns>
+		public GroundTruthScores MapGroundTruthScores(Parameters parameters)
+		{
+			parameters = new Parameters();
+
+			parameters.Parameter = new List<Parameters.ParameterComponent>
+			{
+				new Parameters.ParameterComponent
+				{
+					Name = "link",
+					Part = new List<Parameters.ParameterComponent>
+					{
+						new Parameters.ParameterComponent
+						{
+							Name = "matchResult",
+							Value = new FhirString("MATCH")
+						},
+						new Parameters.ParameterComponent
+						{
+							Name = "score",
+							Value = new FhirDecimal((decimal)3.09743695)
+						}
+					}
+				},
+				new Parameters.ParameterComponent
+				{
+					Name = "link",
+					Part = new List<Parameters.ParameterComponent>
+					{
+						new Parameters.ParameterComponent
+						{
+							Name = "matchResult",
+							Value = new FhirString("MATCH")
+						},
+						new Parameters.ParameterComponent
+						{
+							Name = "score",
+							Value = new FhirDecimal((decimal)5.09743695)
+						}
+					}
+				},
+				new Parameters.ParameterComponent
+				{
+					Name = "link",
+					Part = new List<Parameters.ParameterComponent>
+					{
+						new Parameters.ParameterComponent
+						{
+							Name = "matchResult",
+							Value = new FhirString("NON_MATCH")
+						},
+						new Parameters.ParameterComponent
+						{
+							Name = "score",
+							Value = new FhirDecimal((decimal)1.09743695)
+						}
+					}
+				},
+				new Parameters.ParameterComponent
+				{
+					Name = "link",
+					Part = new List<Parameters.ParameterComponent>
+					{
+						new Parameters.ParameterComponent
+						{
+							Name = "matchResult",
+							Value = new FhirString("NON_MATCH")
+						},
+						new Parameters.ParameterComponent
+						{
+							Name = "score",
+							Value = new FhirDecimal((decimal)0.09743695)
+						}
+					}
+				}
+			};
+
+			var groundTruthScores = new GroundTruthScores();
+
+			groundTruthScores.Matches.AddRange(parameters.Parameter.Where(c => c.Name == LinkKey)
+				.Where(c => c.Part.Any(x => x.Name == MatchResultKey && ((FhirString)x.Value).Value == MatchKey))
+				.Where(c => c.Part.Any(x => x.Name == ScoreKey))
+				.SelectMany(c => c.Part.Where(x => x.Name == ScoreKey))
+				.Select(c => ((FhirDecimal)c.Value).Value));
+
+			groundTruthScores.NonMatches.AddRange(parameters.Parameter.Where(c => c.Name == LinkKey)
+				.Where(c => c.Part.Any(x => x.Name == MatchResultKey && ((FhirString)x.Value).Value == NonMatchKey))
+				.Where(c => c.Part.Any(x => x.Name == ScoreKey))
+				.SelectMany(c => c.Part.Where(x => x.Name == ScoreKey))
+				.Select(c => ((FhirDecimal)c.Value).Value));
+
+			return groundTruthScores;
+		}
 	}
 }

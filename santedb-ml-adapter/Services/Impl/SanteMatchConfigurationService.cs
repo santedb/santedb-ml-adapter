@@ -59,7 +59,25 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		/// </summary>
 		/// <param name="id">The id of the match configuration.</param>
 		/// <returns>Returns the match configuration.</returns>
-		public Task<List<MatchAttribute>> GetMatchConfigurationAsync(string id)
+		public async Task<List<MatchAttribute>> GetMatchConfigurationAsync(string id)
+		{
+			await Task.Yield();
+
+			var matchAttributes = new List<MatchAttribute>();
+
+			matchAttributes.Add(new MatchAttribute("relationship[Mother].target.name", 0.77, 0.3));
+			matchAttributes.Add(new MatchAttribute("dateOfBirth", 0.5, 0.5));
+			matchAttributes.Add(new MatchAttribute("identifier[SSN].value", 0.8, 0.1));
+
+			return matchAttributes;
+		}
+
+		/// <summary>
+		/// Maps a match configuration.
+		/// </summary>
+		/// <param name="matchConfiguration">The match configuration.</param>
+		/// <returns>Returns the list of mapped match attributes.</returns>
+		private List<MatchAttribute> MapMatchConfiguration(object matchConfiguration)
 		{
 			throw new NotImplementedException();
 		}

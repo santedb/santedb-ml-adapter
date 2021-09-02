@@ -25,7 +25,6 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
-using System.Text;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 
@@ -110,11 +109,7 @@ namespace SanteDB.ML.Adapter.Auth
 					return AuthenticateResult.Fail(authorizationErrorMessages["AUTH_ERR_003"]);
 				}
 
-				var decodedValue = Encoding.UTF8.GetString(Convert.FromBase64String(headerValue));
-				var values = decodedValue.Split(':');
-
-				// TODO: load from configuration
-				if (values[0] == "test" && values[1] == "test")
+				if (this.configuration.GetValue<string>("Key") == headerValue)
 				{
 					return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(new List<Claim>
 					{

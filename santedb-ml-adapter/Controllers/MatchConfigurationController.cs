@@ -23,9 +23,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SanteDB.ML.Adapter.Models;
+using SanteDB.ML.Adapter.Services;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -33,12 +33,12 @@ using System.Threading.Tasks;
 namespace SanteDB.ML.Adapter.Controllers
 {
 	/// <summary>
-	/// Represents a configuration controller.
+	/// Represents a match configuration controller.
 	/// </summary>
 	[ApiController]
-	[Route("config")]
+	[Route("matchConfig")]
 	[Authorize(AuthenticationSchemes = "Basic")]
-	public class ConfigurationController : ControllerBase
+	public class MatchConfigurationController : ControllerBase
 	{
 
 		/// <summary>
@@ -49,7 +49,7 @@ namespace SanteDB.ML.Adapter.Controllers
 		/// <summary>
 		/// The serializer options.
 		/// </summary>
-		private static readonly JsonSerializerOptions serializerOptions = new JsonSerializerOptions
+		private static readonly JsonSerializerOptions serializerOptions = new()
 		{
 			AllowTrailingCommas = false,
 			IgnoreReadOnlyProperties = true,
@@ -62,15 +62,29 @@ namespace SanteDB.ML.Adapter.Controllers
 		/// <summary>
 		/// The logger.
 		/// </summary>
-		private readonly ILogger<ConfigurationController> logger;
+		private readonly ILogger<MatchConfigurationController> logger;
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="ConfigurationController"/> class.
+		/// The ground truth service.
+		/// </summary>
+		private readonly ISanteGroundTruthService groundTruthService;
+
+		/// <summary>
+		/// The match configuration service
+		/// </summary>
+		private readonly ISanteMatchConfigurationService matchConfigurationService;
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="MatchConfigurationController" /> class.
 		/// </summary>
 		/// <param name="logger">The logger.</param>
-		public ConfigurationController(ILogger<ConfigurationController> logger)
+		/// <param name="groundTruthService">The ground truth service.</param>
+		/// <param name="matchConfigurationService">The match configuration service.</param>
+		public MatchConfigurationController(ILogger<MatchConfigurationController> logger, ISanteGroundTruthService groundTruthService, ISanteMatchConfigurationService matchConfigurationService)
 		{
 			this.logger = logger;
+			this.groundTruthService = groundTruthService;
+			this.matchConfigurationService = matchConfigurationService;
 		}
 
 		/// <summary>
@@ -92,13 +106,7 @@ namespace SanteDB.ML.Adapter.Controllers
 
 			try
 			{
-				await Task.Yield();
-
-				var matchAttributes = new List<MatchAttribute>();
-
-				matchAttributes.Add(new MatchAttribute("relationship[Mother].target.name", 0.77, 0.3));
-				matchAttributes.Add(new MatchAttribute("dateOfBirth", 0.5, 0.5));
-				matchAttributes.Add(new MatchAttribute("identifier[SSN].value",0.8, 0.1));
+				var matchAttributes = await this.matchConfigurationService.GetMatchConfigurationAsync(id);
 
 				result = new ContentResult
 				{
@@ -109,7 +117,7 @@ namespace SanteDB.ML.Adapter.Controllers
 			}
 			catch (Exception e)
 			{
-				this.logger.LogError($"Unable to retrieve configuration: {e}");
+				this.logger.LogError($"Unable to retrieve match configuration: {e}");
 				result = new ContentResult
 				{
 					StatusCode = (int)HttpStatusCode.InternalServerError
@@ -166,7 +174,7 @@ namespace SanteDB.ML.Adapter.Controllers
 			}
 			catch (Exception e)
 			{
-				this.logger.LogError($"Unable to retrieve configuration: {e}");
+				this.logger.LogError($"Unable to retrieve match configuration specification: {e}");
 				result = new ContentResult
 				{
 					StatusCode = (int)HttpStatusCode.InternalServerError
@@ -195,23 +203,18 @@ namespace SanteDB.ML.Adapter.Controllers
 
 			try
 			{
-				await Task.Yield();
-
-				var scores = new GroundTruthScores();
-
-				scores.Matches.AddRange(Enumerable.Range(0, 5).Select(Convert.ToDouble).Select(c => c * new Random().NextDouble()));
-				scores.NonMatches.AddRange(Enumerable.Range(0, 5).Select(Convert.ToDouble).Select(c => c * new Random().NextDouble()));
+				var groundTruthScores = await this.groundTruthService.GetGroundTruthScoresAsync(id);
 
 				result = new ContentResult
 				{
-					Content = JsonSerializer.Serialize(scores, serializerOptions),
+					Content = JsonSerializer.Serialize(groundTruthScores, serializerOptions),
 					ContentType = DefaultContentType,
 					StatusCode = (int)HttpStatusCode.OK
 				};
 			}
 			catch (Exception e)
 			{
-				this.logger.LogError($"Unable to retrieve configuration: {e}");
+				this.logger.LogError($"Unable to retrieve ground truth scores: {e}");
 				result = new ContentResult
 				{
 					StatusCode = (int)HttpStatusCode.InternalServerError
@@ -247,13 +250,19 @@ namespace SanteDB.ML.Adapter.Controllers
 
 			try
 			{
-				await Task.Yield();
+				var matchAttributes = await this.matchConfigurationService.UpdateMatchConfigurationAsync(id, new List<MatchAttribute>());
 
-				result = this.Ok();
+				result = new ContentResult
+				{
+					Content = JsonSerializer.Serialize(matchAttributes, serializerOptions),
+					ContentType = DefaultContentType,
+					StatusCode = (int)HttpStatusCode.OK
+				};
+
 			}
 			catch (Exception e)
 			{
-				this.logger.LogError($"Unable to retrieve configuration: {e}");
+				this.logger.LogError($"Unable to update match configuration: {e}");
 				result = new ContentResult
 				{
 					StatusCode = (int)HttpStatusCode.InternalServerError

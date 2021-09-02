@@ -19,6 +19,7 @@
  * Date: 2021-9-2
  */
 
+using Hl7.Fhir.Model;
 using SanteDB.ML.Adapter.Models;
 
 namespace SanteDB.ML.Adapter.Services
@@ -28,7 +29,11 @@ namespace SanteDB.ML.Adapter.Services
 	/// </summary>
 	public interface ISanteFhirMapService
 	{
-
-		//public GroundTruthScores MapGroundTruthScores()
+		/// <summary>
+		/// Maps ground truth scores.
+		/// </summary>
+		/// <param name="parameters">The parameters.</param>
+		/// <returns>Returns the mapped ground truth scores.</returns>
+		public GroundTruthScores MapGroundTruthScores(Parameters parameters);
 	}
 }
