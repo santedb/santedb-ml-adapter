@@ -29,11 +29,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using SanteDB.ML.Adapter.Auth;
+using SanteDB.ML.Adapter.Services;
+using SanteDB.ML.Adapter.Services.Impl;
 using System;
 using System.Collections.Generic;
 using System.IO.Compression;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace SanteDB.ML.Adapter
@@ -115,12 +116,9 @@ namespace SanteDB.ML.Adapter
 			{
 				options.RespectBrowserAcceptHeader = true;
 				options.ReturnHttpNotAcceptable = true;
-			}).AddXmlSerializerFormatters().AddJsonOptions(options =>
-			{
-				options.JsonSerializerOptions.AllowTrailingCommas = false;
-				options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-				options.JsonSerializerOptions.WriteIndented = true;
 			});
+
+			services.AddHttpClient();
 
 			// add support for HSTS
 			services.AddHsts(options =>
@@ -190,6 +188,11 @@ namespace SanteDB.ML.Adapter
 			// setup the response compression options
 			services.Configure<BrotliCompressionProviderOptions>(options => { options.Level = CompressionLevel.Optimal; });
 			services.Configure<GzipCompressionProviderOptions>(options => { options.Level = CompressionLevel.Optimal; });
+
+			// add OUR services
+			services.AddScoped<ISanteGroundTruthService, SanteGroundTruthService>();
+			services.AddScoped<ISanteMatchConfigurationService, SanteMatchConfigurationService>();
+			services.AddScoped<ISanteFhirMapService, SanteFhirMapService>();
 		}
 
 		/// <summary>

@@ -22,8 +22,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using SanteDB.ML.Adapter.Models;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace SanteDB.ML.Adapter.Controllers
@@ -36,6 +40,25 @@ namespace SanteDB.ML.Adapter.Controllers
 	[Authorize(AuthenticationSchemes = "Basic")]
 	public class ConfigurationController : ControllerBase
 	{
+
+		/// <summary>
+		/// The default content type.
+		/// </summary>
+		private const string DefaultContentType = "application/json";
+
+		/// <summary>
+		/// The serializer options.
+		/// </summary>
+		private static readonly JsonSerializerOptions serializerOptions = new JsonSerializerOptions
+		{
+			AllowTrailingCommas = false,
+			IgnoreReadOnlyProperties = true,
+			ReadCommentHandling = JsonCommentHandling.Skip,
+			IgnoreNullValues = true,
+			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+			WriteIndented = true
+		};
+
 		/// <summary>
 		/// The logger.
 		/// </summary>
@@ -71,7 +94,18 @@ namespace SanteDB.ML.Adapter.Controllers
 			{
 				await Task.Yield();
 
-				result = this.Ok();
+				var matchAttributes = new List<MatchAttribute>();
+
+				matchAttributes.Add(new MatchAttribute("relationship[Mother].target.name", 0.77, 0.3));
+				matchAttributes.Add(new MatchAttribute("dateOfBirth", 0.5, 0.5));
+				matchAttributes.Add(new MatchAttribute("identifier[SSN].value",0.8, 0.1));
+
+				result = new ContentResult
+				{
+					Content = JsonSerializer.Serialize(matchAttributes, serializerOptions),
+					ContentType = DefaultContentType,
+					StatusCode = (int)HttpStatusCode.OK
+				};
 			}
 			catch (Exception e)
 			{
@@ -106,7 +140,29 @@ namespace SanteDB.ML.Adapter.Controllers
 			{
 				await Task.Yield();
 
-				result = this.Ok();
+				var matchAttributes = new List<MatchAttribute>();
+
+				matchAttributes.Add(new MatchAttribute("relationship[Mother].target.name", new List<double>
+				{
+					0, 1
+				}));
+
+				matchAttributes.Add(new MatchAttribute("dateOfBirth", new List<double>
+				{
+					0, 1
+				}));
+
+				matchAttributes.Add(new MatchAttribute("identifier[SSN].value", new List<double>
+				{
+					0, 1
+				}));
+
+				result = new ContentResult
+				{
+					Content = JsonSerializer.Serialize(matchAttributes, serializerOptions),
+					ContentType = DefaultContentType,
+					StatusCode = (int)HttpStatusCode.OK
+				};
 			}
 			catch (Exception e)
 			{
@@ -141,7 +197,17 @@ namespace SanteDB.ML.Adapter.Controllers
 			{
 				await Task.Yield();
 
-				result = this.Ok();
+				var scores = new GroundTruthScores();
+
+				scores.Matches.AddRange(Enumerable.Range(0, 5).Select(Convert.ToDouble).Select(c => c * new Random().NextDouble()));
+				scores.NonMatches.AddRange(Enumerable.Range(0, 5).Select(Convert.ToDouble).Select(c => c * new Random().NextDouble()));
+
+				result = new ContentResult
+				{
+					Content = JsonSerializer.Serialize(scores, serializerOptions),
+					ContentType = DefaultContentType,
+					StatusCode = (int)HttpStatusCode.OK
+				};
 			}
 			catch (Exception e)
 			{
