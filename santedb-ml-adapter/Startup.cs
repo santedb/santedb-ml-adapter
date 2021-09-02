@@ -190,6 +190,7 @@ namespace SanteDB.ML.Adapter
 			services.Configure<GzipCompressionProviderOptions>(options => { options.Level = CompressionLevel.Optimal; });
 
 			// add OUR services
+			services.AddScoped<ISanteAuthenticationService, SanteAuthenticationService>();
 			services.AddScoped<ISanteGroundTruthService, SanteGroundTruthService>();
 			services.AddScoped<ISanteMatchConfigurationService, SanteMatchConfigurationService>();
 			services.AddScoped<ISanteFhirMapService, SanteFhirMapService>();
