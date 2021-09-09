@@ -79,21 +79,35 @@ namespace SanteDB.ML.Adapter
 				logger.LogInformation($"CLI Version: {Environment.Version}");
 				logger.LogInformation($"{entryAssembly.GetCustomAttribute<AssemblyCopyrightAttribute>()?.Copyright}");
 
-				if (OperatingSystem.IsWindows() && shouldRunAsService)
+				var applicationLifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+
+				applicationLifetime.ApplicationStarted.Register(() =>
 				{
 					stopwatch.Stop();
+					logger.LogInformation($"Service started successfully in {stopwatch.Elapsed.TotalMilliseconds} ms");
+				});
+
+				applicationLifetime.ApplicationStopping.Register(() =>
+				{
+					logger.LogInformation("Service stopping");
+				});
+
+				applicationLifetime.ApplicationStopped.Register(() =>
+				{
+					logger.LogInformation("Service stopped");
+				});
+
+
+				if (OperatingSystem.IsWindows() && shouldRunAsService)
+				{
 					throw new NotImplementedException();
 				}
 				else if (OperatingSystem.IsWindows() && !shouldRunAsService)
 				{
-					stopwatch.Stop();
-					logger.LogInformation($"Service started successfully in {stopwatch.Elapsed.TotalMilliseconds} ms");
 					await host.RunAsync();
 				}
 				else if (OperatingSystem.IsLinux())
 				{
-					stopwatch.Stop();
-					logger.LogInformation($"Service started successfully in {stopwatch.Elapsed.TotalMilliseconds} ms");
 					await host.RunAsync();
 				}
 				else
@@ -113,7 +127,7 @@ namespace SanteDB.ML.Adapter
 		/// </summary>
 		/// <param name="args">The arguments.</param>
 		/// <returns>Returns the host builder instance.</returns>
-		public static IHostBuilder CreateHostBuilder(string[] args)
+		private static IHostBuilder CreateHostBuilder(string[] args)
 		{
 			var host = Host.CreateDefaultBuilder(args)
 				.ConfigureWebHostDefaults(webBuilder =>

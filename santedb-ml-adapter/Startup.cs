@@ -27,6 +27,7 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using SanteDB.ML.Adapter.Auth;
 using SanteDB.ML.Adapter.Services;
@@ -142,7 +143,7 @@ namespace SanteDB.ML.Adapter
 				options.AllowedHosts = this.Configuration.GetValue<string>("AllowedHosts").Split(';').ToList();
 			});
 
-			if (!this.webHostEnvironment.IsProduction())
+			if (this.webHostEnvironment.IsDevelopment())
 			{
 				services.AddSwaggerGen(options =>
 				{
@@ -204,12 +205,18 @@ namespace SanteDB.ML.Adapter
 		/// <param name="environment">The webHostEnvironment.</param>
 		public void Configure(IApplicationBuilder app, IWebHostEnvironment environment)
 		{
+			var logger = app.ApplicationServices.GetService<ILogger<Startup>>();
+
 			if (environment.IsDevelopment())
 			{
+				logger.LogInformation($"Environment is {environment.EnvironmentName}, will use the developer exception page");
+
 				app.UseDeveloperExceptionPage();
 			}
 			else
 			{
+				logger.LogInformation($"Environment is {environment.EnvironmentName}, will enable HSTS");
+
 				app.UseHsts();
 			}
 
@@ -249,11 +256,15 @@ namespace SanteDB.ML.Adapter
 
 			if (!environment.IsDevelopment())
 			{
+				logger.LogInformation($"Environment is {environment.EnvironmentName}, will enable HTTPS redirection");
+
 				app.UseHttpsRedirection();
 			}
 
 			if (environment.IsDevelopment())
 			{
+				logger.LogInformation($"Environment is {environment.EnvironmentName}, will enable the OpenAPI test interface");
+
 				app.UseSwagger();
 
 				app.UseSwaggerUI(c =>
@@ -263,12 +274,20 @@ namespace SanteDB.ML.Adapter
 				});
 			}
 
+			logger.LogInformation("Enabling response compression");
+
 			app.UseResponseCompression();
+
+			logger.LogInformation("Enabling routing");
 
 			app.UseRouting();
 
+			logger.LogInformation("Enabling authentication and authorization");
+
 			app.UseAuthentication();
 			app.UseAuthorization();
+
+			logger.LogInformation("Mapping controllers");
 
 			app.UseEndpoints(endpoints =>
 			{
