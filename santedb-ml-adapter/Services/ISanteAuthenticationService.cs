@@ -19,6 +19,9 @@
  * Date: 2021-9-2
  */
 
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
 namespace SanteDB.ML.Adapter.Services
 {
 	/// <summary>
@@ -26,5 +29,17 @@ namespace SanteDB.ML.Adapter.Services
 	/// </summary>
 	public interface ISanteAuthenticationService
 	{
+		/// <summary>
+		/// Authenticates against the SanteDB service.
+		/// </summary>
+		/// <returns>Returns the access token.</returns>
+		Task<string> AuthenticateAsync();
+
+		/// <summary>
+		/// Authenticates against the SanteDB service.
+		/// </summary>
+		/// <param name="parameters">The parameters.</param>
+		/// <returns>Returns the access token.</returns>
+		Task<string> AuthenticateAsync(IEnumerable<KeyValuePair<string, string>> parameters);
 	}
 }

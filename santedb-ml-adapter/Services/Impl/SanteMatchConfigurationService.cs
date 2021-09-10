@@ -19,12 +19,16 @@
  * Date: 2021-9-2
  */
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SanteDB.ML.Adapter.Models;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace SanteDB.ML.Adapter.Services.Impl
 {
@@ -33,6 +37,16 @@ namespace SanteDB.ML.Adapter.Services.Impl
 	/// </summary>
 	public class SanteMatchConfigurationService : ISanteMatchConfigurationService
 	{
+		/// <summary>
+		/// The authentication service.
+		/// </summary>
+		private readonly ISanteAuthenticationService authenticationService;
+
+		/// <summary>
+		/// The configuration.
+		/// </summary>
+		private readonly IConfiguration configuration;
+
 		/// <summary>
 		/// The HTTP client factory.
 		/// </summary>
@@ -44,12 +58,16 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		private readonly ILogger<SanteMatchConfigurationService> logger;
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="SanteMatchConfigurationService"/> class.
+		/// Initializes a new instance of the <see cref="SanteMatchConfigurationService" /> class.
 		/// </summary>
+		/// <param name="configuration">The configuration.</param>
 		/// <param name="httpClientFactory">The HTTP client factory.</param>
+		/// <param name="authenticationService">The authentication service.</param>
 		/// <param name="logger">The logger.</param>
-		public SanteMatchConfigurationService(IHttpClientFactory httpClientFactory, ILogger<SanteMatchConfigurationService> logger)
+		public SanteMatchConfigurationService(IConfiguration configuration, IHttpClientFactory httpClientFactory, ISanteAuthenticationService authenticationService, ILogger<SanteMatchConfigurationService> logger)
 		{
+			this.configuration = configuration;
+			this.authenticationService = authenticationService;
 			this.httpClientFactory = httpClientFactory;
 			this.logger = logger;
 		}
@@ -61,25 +79,60 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		/// <returns>Returns the match configuration.</returns>
 		public async Task<List<MatchAttribute>> GetMatchConfigurationAsync(string id)
 		{
-			await Task.Yield();
+			if (string.IsNullOrEmpty(id))
+			{
+				throw new ArgumentNullException(nameof(id), "Value cannot be null");
+			}
 
-			var matchAttributes = new List<MatchAttribute>();
+			var accessToken = await this.authenticationService.AuthenticateAsync();
 
-			matchAttributes.Add(new MatchAttribute("relationship[Mother].target.name", 0.77, 0.3));
-			matchAttributes.Add(new MatchAttribute("dateOfBirth", 0.5, 0.5));
-			matchAttributes.Add(new MatchAttribute("identifier[SSN].value", 0.8, 0.1));
+			var client = this.httpClientFactory.CreateClient();
 
-			return matchAttributes;
-		}
+			if (client.DefaultRequestHeaders.Accept.All(c => c.MediaType != "application/xml"))
+			{
+				client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xml"));
+			}
 
-		/// <summary>
-		/// Maps a match configuration.
-		/// </summary>
-		/// <param name="matchConfiguration">The match configuration.</param>
-		/// <returns>Returns the list of mapped match attributes.</returns>
-		private List<MatchAttribute> MapMatchConfiguration(object matchConfiguration)
-		{
-			throw new NotImplementedException();
+			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+			this.logger.LogDebug($"Attempting to retrieve match config: {id}");
+
+			var response = await client.GetAsync(new Uri($"{this.configuration.GetValue<string>("SanteDBEndpoint")}/ami/MatchConfiguration/{id}"));
+
+			response.EnsureSuccessStatusCode();
+
+			var responseMessage = await response.Content.ReadAsStringAsync();
+
+			var document = new XmlDocument();
+			document.LoadXml(responseMessage);
+
+			this.logger.LogDebug($"Match config retrieved: {id}");
+
+			if (document.DocumentElement == null)
+			{
+				throw new InvalidOperationException($"Match config: {id} does not have a root element");
+			}
+
+			var scoringElement = document.DocumentElement.ChildNodes.Cast<XmlElement>().FirstOrDefault(element => element.Name == "scoring");
+
+			if (scoringElement == null)
+			{
+				throw new InvalidOperationException($"Match config: {id} does not have a scoring section");
+			}
+
+			var attributeNodes = scoringElement.ChildNodes.Cast<XmlElement>().Where(c => c.Name == "attribute").Select(c => c.Attributes);
+
+			return attributeNodes.Select(x => new MatchAttribute
+			{
+				Key = x["property"]?.Value ?? throw new InvalidOperationException("Attribute element does not have a 'property' attribute"),
+				M = Convert.ToDouble(x["m"]?.Value ?? throw new InvalidOperationException("Attribute element does not have a 'm' attribute")),
+				U = Convert.ToDouble(x["u"]?.Value ?? throw new InvalidOperationException("Attribute element does not have a 'u' attribute")),
+				Bounds = new List<double>
+				{
+					0, 1
+				}
+
+			}).ToList();
 		}
 
 		/// <summary>

@@ -19,9 +19,15 @@
  * Date: 2021-9-2
  */
 
+using Hl7.Fhir.Model;
+using Hl7.Fhir.Serialization;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SanteDB.ML.Adapter.Models;
+using System;
+using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
 namespace SanteDB.ML.Adapter.Services.Impl
@@ -31,6 +37,16 @@ namespace SanteDB.ML.Adapter.Services.Impl
 	/// </summary>
 	public class SanteGroundTruthService : ISanteGroundTruthService
 	{
+		/// <summary>
+		/// The authentication service.
+		/// </summary>
+		private readonly ISanteAuthenticationService authenticationService;
+
+		/// <summary>
+		/// The configuration.
+		/// </summary>
+		private readonly IConfiguration configuration;
+
 		/// <summary>
 		/// The HTTP client factory.
 		/// </summary>
@@ -49,11 +65,15 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		/// <summary>
 		/// Initializes a new instance of the <see cref="SanteGroundTruthService" /> class.
 		/// </summary>
+		/// <param name="configuration">The configuration.</param>
 		/// <param name="httpClientFactory">The HTTP client factory.</param>
+		/// <param name="authenticationService">The authentication service.</param>
 		/// <param name="logger">The logger.</param>
 		/// <param name="fhirMapService">The FHIR map service.</param>
-		public SanteGroundTruthService(IHttpClientFactory httpClientFactory, ILogger<SanteGroundTruthService> logger, ISanteFhirMapService fhirMapService)
+		public SanteGroundTruthService(IConfiguration configuration, IHttpClientFactory httpClientFactory, ISanteAuthenticationService authenticationService, ILogger<SanteGroundTruthService> logger, ISanteFhirMapService fhirMapService)
 		{
+			this.authenticationService = authenticationService;
+			this.configuration = configuration;
 			this.httpClientFactory = httpClientFactory;
 			this.logger = logger;
 			this.fhirMapService = fhirMapService;
@@ -67,11 +87,35 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		/// <returns>Returns the ground truth scores.</returns>
 		public async Task<GroundTruthScores> GetGroundTruthScoresAsync(string id)
 		{
-			await Task.Yield();
+			if (string.IsNullOrEmpty(id))
+			{
+				throw new ArgumentNullException(nameof(id), "Value cannot be null");
+			}
 
-			var test = this.fhirMapService.MapGroundTruthScores(null);
+			var accessToken = await this.authenticationService.AuthenticateAsync();
 
-			return test;
+			var client = this.httpClientFactory.CreateClient();
+
+			if (client.DefaultRequestHeaders.Accept.All(c => c.MediaType != "application/fhir+xml"))
+			{
+				client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/fhir+xml"));
+			}
+
+			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+			this.logger.LogDebug($"Attempting to retrieve match config: {id}");
+
+			var response = await client.GetAsync(new Uri($"{this.configuration.GetValue<string>("SanteDBEndpoint")}/fhir/Patient/$mdm-query-links?_configurationName={id}"));
+
+			response.EnsureSuccessStatusCode();
+
+			var responseMessage = await response.Content.ReadAsStringAsync();
+
+			var parser = new FhirXmlParser(ParserSettings.CreateDefault());
+
+			var parameters = parser.Parse<Parameters>(responseMessage);
+
+			return this.fhirMapService.MapGroundTruthScores(parameters);
 		}
 	}
 }

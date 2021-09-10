@@ -19,7 +19,6 @@
  * Date: 2021-8-11
  */
 
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SanteDB.ML.Adapter.Models;
@@ -29,6 +28,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SanteDB.ML.Adapter.Controllers
 {
@@ -40,7 +40,6 @@ namespace SanteDB.ML.Adapter.Controllers
 	[Authorize(AuthenticationSchemes = "Basic")]
 	public class MatchConfigurationController : ControllerBase
 	{
-
 		/// <summary>
 		/// The default content type.
 		/// </summary>
@@ -146,24 +145,7 @@ namespace SanteDB.ML.Adapter.Controllers
 
 			try
 			{
-				await Task.Yield();
-
-				var matchAttributes = new List<MatchAttribute>();
-
-				matchAttributes.Add(new MatchAttribute("relationship[Mother].target.name", new List<double>
-				{
-					0, 1
-				}));
-
-				matchAttributes.Add(new MatchAttribute("dateOfBirth", new List<double>
-				{
-					0, 1
-				}));
-
-				matchAttributes.Add(new MatchAttribute("identifier[SSN].value", new List<double>
-				{
-					0, 1
-				}));
+				var matchAttributes = await this.matchConfigurationService.GetMatchConfigurationAsync(id);
 
 				result = new ContentResult
 				{
