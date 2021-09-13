@@ -105,7 +105,7 @@ namespace SanteDB.ML.Adapter.Services.Impl
 
 			this.logger.LogDebug($"Attempting to retrieve match config: {id}");
 
-			var response = await client.GetAsync(new Uri($"{this.configuration.GetValue<string>("SanteDBEndpoint")}/fhir/Patient/$mdm-query-links?_configurationName={id}"));
+			var response = await client.GetAsync(new Uri($"{this.configuration.GetValue<string>("SanteDBEndpoint")}/fhir/Patient/$mdm-query-links?_configurationName={id}&linkSource=MANUAL"));
 
 			response.EnsureSuccessStatusCode();
 
