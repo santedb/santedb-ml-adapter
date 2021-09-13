@@ -79,6 +79,13 @@ namespace SanteDB.ML.Adapter.Auth
 		{
 			await Task.Yield();
 
+
+			foreach (var (key, value) in this.Request.Headers)
+			{
+				this.logger.LogDebug($"{key}: {value}");
+			}
+			
+
 			if (!this.Request.Headers.ContainsKey("Authorization"))
 			{
 				this.logger.LogError("Authorization header missing");
