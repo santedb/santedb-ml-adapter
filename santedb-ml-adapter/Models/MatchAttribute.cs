@@ -63,8 +63,8 @@ namespace SanteDB.ML.Adapter.Models
 		/// Initializes a new instance of the <see cref="MatchAttribute"/> class.
 		/// </summary>
 		/// <param name="key">The key.</param>
-		/// <param name="m">The m.</param>
-		/// <param name="u">The u.</param>
+		/// <param name="m">The likelihood that the records are a match.</param>
+		/// <param name="u">The likelihood that the records are a match by pure coincidence.</param>
 		public MatchAttribute(string key, double m, double u) : this(key)
 		{
 			this.M = m;
@@ -79,21 +79,25 @@ namespace SanteDB.ML.Adapter.Models
 		public string Key { get; set; }
 
 		/// <summary>
-		/// Gets or sets the m.
+		/// Gets or sets the value that if a given attribute is a match based on a specific rule between two records
+		/// then this value represents the likelihood that the records are a match.
 		/// </summary>
-		/// <value>The m.</value>
+		/// <value>The m value.</value>
 		[JsonPropertyName("m")]
 		public double? M { get; set; }
 
 		/// <summary>
-		/// Gets or sets the u.
+		/// Gets or sets the value that if a given attribute is a match based on a specific rule between two records
+		/// then this value represents the likelihood that the records are a match by pure coincidence.
 		/// </summary>
-		/// <value>The u.</value>
+		/// <value>The u value.</value>
 		[JsonPropertyName("u")]
 		public double? U { get; set; }
 
 		/// <summary>
 		/// Gets or sets the bounds.
+		/// This represents the constraints (min, max) which are applied to the M and U values.
+		/// <see cref="M"/>. <see cref="U"/>.
 		/// </summary>
 		/// <value>The bounds.</value>
 		[JsonPropertyName("bounds")]
