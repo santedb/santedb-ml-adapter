@@ -140,7 +140,6 @@ namespace SanteDB.ML.Adapter
 						{
 							options.Configure(context.Configuration.GetSection("Kestrel"));
 						});
-
 					}
 
 					webBuilder.UseStartup<Startup>();
