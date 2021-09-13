@@ -143,6 +143,7 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		/// <returns>Returns the match configuration.</returns>
 		public Task<List<MatchAttribute>> UpdateMatchConfigurationAsync(string id, List<MatchAttribute> matchAttributes)
 		{
+			// TODO: get config from SanteDB, update match attributes, PUT MatchConfiguration to SanteDB
 			throw new NotImplementedException();
 		}
 	}
