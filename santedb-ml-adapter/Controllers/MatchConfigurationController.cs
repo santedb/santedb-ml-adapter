@@ -19,6 +19,7 @@
  * Date: 2021-8-11
  */
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SanteDB.ML.Adapter.Models;
@@ -28,7 +29,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
 
 namespace SanteDB.ML.Adapter.Controllers
 {
@@ -214,7 +214,7 @@ namespace SanteDB.ML.Adapter.Controllers
 		/// <returns>Returns the updated match configuration.</returns>
 		[HttpPut]
 		[Route("{id}")]
-		public async Task<IActionResult> UpdateAsync(string id, [FromBody] object resource)
+		public async Task<IActionResult> UpdateAsync(string id, [FromBody] List<MatchAttribute> resource)
 		{
 			IActionResult result = this.BadRequest();
 
@@ -232,7 +232,7 @@ namespace SanteDB.ML.Adapter.Controllers
 
 			try
 			{
-				var matchAttributes = await this.matchConfigurationService.UpdateMatchConfigurationAsync(id, new List<MatchAttribute>());
+				var matchAttributes = await this.matchConfigurationService.UpdateMatchConfigurationAsync(id, resource);
 
 				result = new ContentResult
 				{
