@@ -19,12 +19,15 @@
  * Date: 2021-9-2
  */
 
+//using Hl7.Fhir.Model;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Serialization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SanteDB.ML.Adapter.Models;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -37,6 +40,21 @@ namespace SanteDB.ML.Adapter.Services.Impl
 	/// </summary>
 	public class SanteGroundTruthService : ISanteGroundTruthService
 	{
+		/// <summary>
+		/// The FHIR media type.
+		/// </summary>
+		private const string FhirMediaType = "application/fhir+xml";
+
+		/// <summary>
+		/// The match key.
+		/// </summary>
+		private const string MatchKey = "MATCH";
+
+		/// <summary>
+		/// The non match key.
+		/// </summary>
+		private const string NonMatchKey = "NO_MATCH";
+
 		/// <summary>
 		/// The authentication service.
 		/// </summary>
@@ -77,7 +95,6 @@ namespace SanteDB.ML.Adapter.Services.Impl
 			this.httpClientFactory = httpClientFactory;
 			this.logger = logger;
 			this.fhirMapService = fhirMapService;
-
 		}
 
 		/// <summary>
@@ -87,25 +104,63 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		/// <returns>Returns the ground truth scores.</returns>
 		public async Task<GroundTruthScores> GetGroundTruthScoresAsync(string id)
 		{
-			if (string.IsNullOrEmpty(id))
+			Stopwatch stopwatch = new Stopwatch();
+
+			stopwatch.Start();
+
+			var nonMatches = await this.GetGroundTruthScoresInternalAsync(id, NonMatchKey);
+			var matches = await this.GetGroundTruthScoresInternalAsync(id, MatchKey);
+
+			stopwatch.Stop();
+
+			Console.WriteLine($"Elapsed: {stopwatch.Elapsed.TotalMilliseconds}");
+
+			return new GroundTruthScores(new List<GroundTruthScores>
 			{
-				throw new ArgumentNullException(nameof(id), "Value cannot be null");
+				matches,
+				nonMatches
+			});
+		}
+
+		private async Task<GroundTruthScores> GetGroundTruthScoresInternalAsync(string id, string matchKey)
+		{
+			var groundTruthScores = new List<GroundTruthScores>();
+
+			var offset = 0;
+			var parameters = await this.QueryGroundTruthScoresAsync(id, offset, 1000, matchKey);
+
+			groundTruthScores.Add(this.fhirMapService.MapGroundTruthScores(parameters));
+
+			// keep fetching as long as we have a "next" link
+			while (parameters.Parameter.Any(c => c.Name == "next"))
+			{
+				offset += 1000;
+				parameters = await this.QueryGroundTruthScoresAsync(id, offset, 1000, matchKey);
+				groundTruthScores.Add(this.fhirMapService.MapGroundTruthScores(parameters));
 			}
 
-			var accessToken = await this.authenticationService.AuthenticateAsync();
+			return new GroundTruthScores(groundTruthScores);
+		}
 
+		private async Task<Parameters> QueryGroundTruthScoresAsync(string id, int offset, int count, string matchResult)
+		{
+			var accessToken = await this.authenticationService.AuthenticateAsync();
 			var client = this.httpClientFactory.CreateClient();
 
-			if (client.DefaultRequestHeaders.Accept.All(c => c.MediaType != "application/fhir+xml"))
+			if (client.DefaultRequestHeaders.Accept.All(c => c.MediaType != FhirMediaType))
 			{
-				client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/fhir+xml"));
+				client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(FhirMediaType));
 			}
 
 			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
 			this.logger.LogDebug($"Attempting to retrieve match config: {id}");
 
-			var response = await client.GetAsync(new Uri($"{this.configuration.GetValue<string>("SanteDBEndpoint")}/fhir/Patient/$mdm-query-links?_configurationName={id}&linkSource=MANUAL"));
+			// default to linkSource=MANUAL here
+			// because we only want to return the records that were annotated by a human
+			// therefore returning ground truth
+			//var response = await client.GetAsync(new Uri($"{this.configuration.GetValue<string>("SanteDBEndpoint")}/fhir/Patient/$mdm-query-links?_configurationName={id}&linkSource=MANUAL&_count={count}&_offset={offset}"));
+			var response = await client.GetAsync(new Uri($"{this.configuration.GetValue<string>("SanteDBEndpoint")}/fhir/Patient/$mdm-query-links?_configurationName={id}&_count={count}&_offset={offset}&matchResult={matchResult}"));
 
 			response.EnsureSuccessStatusCode();
 
@@ -113,9 +168,7 @@ namespace SanteDB.ML.Adapter.Services.Impl
 
 			var parser = new FhirXmlParser(ParserSettings.CreateDefault());
 
-			var parameters = parser.Parse<Parameters>(responseMessage);
-
-			return this.fhirMapService.MapGroundTruthScores(parameters);
+			return parser.Parse<Parameters>(responseMessage);
 		}
 	}
 }

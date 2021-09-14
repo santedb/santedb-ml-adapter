@@ -79,7 +79,6 @@ namespace SanteDB.ML.Adapter.Auth
 		{
 			await Task.Yield();
 
-
 			foreach (var (key, value) in this.Request.Headers)
 			{
 				this.logger.LogDebug($"{key}: {value}");
@@ -120,7 +119,7 @@ namespace SanteDB.ML.Adapter.Auth
 				{
 					return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(new List<Claim>
 					{
-						new(ClaimTypes.Sid, "machine learning")
+						new(ClaimTypes.Sid, "ML")
 					}, "Basic")), new AuthenticationProperties
 					{
 						IssuedUtc = DateTimeOffset.UtcNow

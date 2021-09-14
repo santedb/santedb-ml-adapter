@@ -19,7 +19,9 @@
  * Date: 2021-9-2
  */
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 
 namespace SanteDB.ML.Adapter.Models
@@ -36,6 +38,38 @@ namespace SanteDB.ML.Adapter.Models
 		{
 			this.Matches = new List<decimal?>();
 			this.NonMatches = new List<decimal?>();
+		}
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="GroundTruthScores" /> class.
+		/// </summary>
+		/// <param name="groundTruthScores">The ground truth scores.</param>
+		/// <exception cref="ArgumentNullException">groundTruthScores - Value cannot be null</exception>
+		public GroundTruthScores(GroundTruthScores groundTruthScores)
+		{
+			if (groundTruthScores == null)
+			{
+				throw new ArgumentNullException(nameof(groundTruthScores), "Value cannot be null");
+			}
+
+			this.Matches = groundTruthScores.Matches;
+			this.NonMatches = groundTruthScores.NonMatches;
+		}
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="GroundTruthScores"/> class.
+		/// </summary>
+		/// <param name="groundTruthScores">The ground truth scores.</param>
+		/// <exception cref="ArgumentNullException">groundTruthScores - Value cannot be null</exception>
+		public GroundTruthScores(List<GroundTruthScores> groundTruthScores)
+		{
+			if (groundTruthScores == null)
+			{
+				throw new ArgumentNullException(nameof(groundTruthScores), "Value cannot be null");
+			}
+
+			this.Matches = groundTruthScores.SelectMany(c => c.Matches).ToList();
+			this.NonMatches = groundTruthScores.SelectMany(c => c.NonMatches).ToList();
 		}
 
 		/// <summary>
