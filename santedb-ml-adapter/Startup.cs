@@ -119,6 +119,7 @@ namespace SanteDB.ML.Adapter
 				options.ReturnHttpNotAcceptable = true;
 			});
 
+			// add the HTTP client via DI
 			services.AddHttpClient();
 
 			// add support for HSTS
@@ -293,6 +294,8 @@ namespace SanteDB.ML.Adapter
 			{
 				endpoints.MapControllers();
 			});
+
+			logger.LogInformation("Application configuration complete");
 		}
 	}
 }
