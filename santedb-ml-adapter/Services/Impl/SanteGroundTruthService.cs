@@ -19,7 +19,6 @@
  * Date: 2021-9-2
  */
 
-//using Hl7.Fhir.Model;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Serialization;
 using Microsoft.Extensions.Configuration;
