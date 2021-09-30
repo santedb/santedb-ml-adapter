@@ -257,9 +257,9 @@ namespace SanteDB.ML.Adapter
 
 			if (!environment.IsDevelopment())
 			{
-				logger.LogInformation($"Environment is {environment.EnvironmentName}, will enable HTTPS redirection");
+				//logger.LogInformation($"Environment is {environment.EnvironmentName}, will enable HTTPS redirection");
 
-				app.UseHttpsRedirection();
+				//app.UseHttpsRedirection();
 			}
 
 			if (environment.IsDevelopment())
