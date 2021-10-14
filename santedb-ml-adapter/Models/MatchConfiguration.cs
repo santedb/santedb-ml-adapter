@@ -34,7 +34,7 @@ namespace SanteDB.ML.Adapter.Models
 		/// </summary>
 		public MatchConfiguration()
 		{
-			
+			this.MatchAttributes = new List<MatchAttribute>();
 		}
 
 		/// <summary>
