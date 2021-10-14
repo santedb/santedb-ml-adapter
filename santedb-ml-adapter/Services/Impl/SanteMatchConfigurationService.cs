@@ -77,7 +77,7 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		/// </summary>
 		/// <param name="id">The id of the match configuration.</param>
 		/// <returns>Returns the match configuration.</returns>
-		public async Task<List<MatchAttribute>> GetMatchConfigurationAsync(string id)
+		public async Task<MatchConfiguration> GetMatchConfigurationAsync(string id)
 		{
 			if (string.IsNullOrEmpty(id))
 			{
@@ -122,29 +122,40 @@ namespace SanteDB.ML.Adapter.Services.Impl
 
 			var attributeNodes = scoringElement.ChildNodes.Cast<XmlElement>().Where(c => c.Name == "attribute").Select(c => c.Attributes);
 
-			return attributeNodes.Select(x => new MatchAttribute
+			var matchConfiguration = new MatchConfiguration
 			{
-				Key = x["property"]?.Value ?? throw new InvalidOperationException("Attribute element does not have a 'property' attribute"),
-				M = Convert.ToDouble(x["m"]?.Value ?? throw new InvalidOperationException("Attribute element does not have a 'm' attribute")),
-				U = Convert.ToDouble(x["u"]?.Value ?? throw new InvalidOperationException("Attribute element does not have a 'u' attribute")),
-				Bounds = new List<double>
+				MatchAttributes = attributeNodes.Select(x => new MatchAttribute
 				{
-					0, 1
-				}
+					Key = x["property"]?.Value ?? throw new InvalidOperationException("Attribute element does not have a 'property' attribute"),
+					M = Convert.ToDouble(x["m"]?.Value ?? throw new InvalidOperationException("Attribute element does not have a 'm' attribute")),
+					U = Convert.ToDouble(x["u"]?.Value ?? throw new InvalidOperationException("Attribute element does not have a 'u' attribute")),
+					Bounds = new List<double>
+					{
+						0, 1
+					}
 
-			}).ToList();
+				}).ToList()
+			};
+
+			matchConfiguration.MatchThreshold = Convert.ToDouble(document.DocumentElement.Attributes["matchThreshold"]?.Value ?? throw new InvalidOperationException("Match configuration element does not have a 'matchThreshold' attribute"));
+			matchConfiguration.NonMatchThreshold = Convert.ToDouble(document.DocumentElement.Attributes["nonmatchThreshold"]?.Value ?? throw new InvalidOperationException("Match configuration element does not have a 'nonmatchThreshold' attribute"));
+
+			return matchConfiguration;
 		}
 
 		/// <summary>
 		/// Updates a match configuration asynchronously.
 		/// </summary>
 		/// <param name="id">The id of the match configuration.</param>
-		/// <param name="matchAttributes">The match attributes.</param>
+		/// <param name="matchConfiguration">The match configuration.</param>
 		/// <returns>Returns the match configuration.</returns>
-		public Task<List<MatchAttribute>> UpdateMatchConfigurationAsync(string id, List<MatchAttribute> matchAttributes)
+		public async Task<MatchConfiguration> UpdateMatchConfigurationAsync(string id, MatchConfiguration matchConfiguration)
 		{
+			await Task.Yield();
+			return matchConfiguration;
+
 			// TODO: get config from SanteDB, update match attributes, PUT MatchConfiguration to SanteDB
-			throw new NotImplementedException();
+			//throw new NotImplementedException();
 		}
 	}
 }

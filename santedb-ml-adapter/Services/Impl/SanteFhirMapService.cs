@@ -48,7 +48,7 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		/// <summary>
 		/// The non match key.
 		/// </summary>
-		private const string NonMatchKey = "NON_MATCH";
+		private const string NonMatchKey = "NO_MATCH";
 
 		/// <summary>
 		/// The score key

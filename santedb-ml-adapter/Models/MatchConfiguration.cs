@@ -16,33 +16,46 @@
  * the License.
  * 
  * User: khannan
- * Date: 2021-9-2
+ * Date: 2021-10-14
  */
 
-using SanteDB.ML.Adapter.Models;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.Text.Json.Serialization;
 
-namespace SanteDB.ML.Adapter.Services
+namespace SanteDB.ML.Adapter.Models
 {
 	/// <summary>
-	/// Represents a SanteDB match configuration service.
+	/// Represents a match configuration.
 	/// </summary>
-	public interface ISanteMatchConfigurationService
+	public class MatchConfiguration
 	{
 		/// <summary>
-		/// Gets a match configuration asynchronously.
+		/// Initializes a new instance of the <see cref="MatchConfiguration"/> class.
 		/// </summary>
-		/// <param name="id">The id of the match configuration.</param>
-		/// <returns>Returns the match configuration.</returns>
-		public Task<MatchConfiguration> GetMatchConfigurationAsync(string id);
+		public MatchConfiguration()
+		{
+			
+		}
 
 		/// <summary>
-		/// Updates a match configuration asynchronously.
+		/// Gets or sets the match threshold.
 		/// </summary>
-		/// <param name="id">The id of the match configuration.</param>
-		/// <param name="matchConfiguration">The match configuration.</param>
-		/// <returns>Returns the match configuration.</returns>
-		public Task<MatchConfiguration> UpdateMatchConfigurationAsync(string id, MatchConfiguration matchConfiguration);
+		/// <value>The match threshold.</value>
+		[JsonPropertyName("matchThreshold")]
+		public double MatchThreshold { get; set; }
+
+		/// <summary>
+		/// Gets or sets the non match threshold.
+		/// </summary>
+		/// <value>The non match threshold.</value>
+		[JsonPropertyName("nonMatchThreshold")]
+		public double NonMatchThreshold { get; set; }
+
+		/// <summary>
+		/// Gets or sets the match attributes.
+		/// </summary>
+		/// <value>The match attributes.</value>
+		[JsonPropertyName("attributes")]
+		public List<MatchAttribute> MatchAttributes { get; set; }
 	}
 }

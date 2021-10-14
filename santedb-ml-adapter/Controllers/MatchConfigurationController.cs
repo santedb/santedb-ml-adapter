@@ -25,7 +25,6 @@ using Microsoft.Extensions.Logging;
 using SanteDB.ML.Adapter.Models;
 using SanteDB.ML.Adapter.Services;
 using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -210,11 +209,11 @@ namespace SanteDB.ML.Adapter.Controllers
 		/// Updates a match configuration asynchronously.
 		/// </summary>
 		/// <param name="id">The id of the match configuration to update.</param>
-		/// <param name="resource">The resource.</param>
+		/// <param name="matchConfiguration">The match configuration.</param>
 		/// <returns>Returns the updated match configuration.</returns>
 		[HttpPut]
 		[Route("{id}")]
-		public async Task<IActionResult> UpdateAsync(string id, [FromBody] List<MatchAttribute> resource)
+		public async Task<IActionResult> UpdateAsync(string id, [FromBody] MatchConfiguration matchConfiguration)
 		{
 			IActionResult result = this.BadRequest();
 
@@ -224,7 +223,7 @@ namespace SanteDB.ML.Adapter.Controllers
 				return result;
 			}
 
-			if (resource == null)
+			if (matchConfiguration == null)
 			{
 				this.logger.LogError("The resource cannot be null");
 				return result;
@@ -232,7 +231,7 @@ namespace SanteDB.ML.Adapter.Controllers
 
 			try
 			{
-				var matchAttributes = await this.matchConfigurationService.UpdateMatchConfigurationAsync(id, resource);
+				var matchAttributes = await this.matchConfigurationService.UpdateMatchConfigurationAsync(id, matchConfiguration);
 
 				result = new ContentResult
 				{
