@@ -22,7 +22,6 @@
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Serialization;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using SanteDB.ML.Adapter.Models;
 using System;
 using System.Collections.Generic;
@@ -70,11 +69,6 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		private readonly IHttpClientFactory httpClientFactory;
 
 		/// <summary>
-		/// The logger.
-		/// </summary>
-		private readonly ILogger<SanteGroundTruthService> logger;
-
-		/// <summary>
 		/// The FHIR map service.
 		/// </summary>
 		private readonly ISanteFhirMapService fhirMapService;
@@ -85,14 +79,12 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		/// <param name="configuration">The configuration.</param>
 		/// <param name="httpClientFactory">The HTTP client factory.</param>
 		/// <param name="authenticationService">The authentication service.</param>
-		/// <param name="logger">The logger.</param>
 		/// <param name="fhirMapService">The FHIR map service.</param>
-		public SanteGroundTruthService(IConfiguration configuration, IHttpClientFactory httpClientFactory, ISanteAuthenticationService authenticationService, ILogger<SanteGroundTruthService> logger, ISanteFhirMapService fhirMapService)
+		public SanteGroundTruthService(IConfiguration configuration, IHttpClientFactory httpClientFactory, ISanteAuthenticationService authenticationService, ISanteFhirMapService fhirMapService)
 		{
 			this.authenticationService = authenticationService;
 			this.configuration = configuration;
 			this.httpClientFactory = httpClientFactory;
-			this.logger = logger;
 			this.fhirMapService = fhirMapService;
 		}
 
@@ -103,7 +95,7 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		/// <returns>Returns the ground truth scores.</returns>
 		public async Task<GroundTruthScores> GetGroundTruthScoresAsync(string id)
 		{
-			Stopwatch stopwatch = new Stopwatch();
+			var stopwatch = new Stopwatch();
 
 			stopwatch.Start();
 
@@ -152,8 +144,6 @@ namespace SanteDB.ML.Adapter.Services.Impl
 			}
 
 			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-			//this.logger.LogDebug($"Attempting to retrieve match config: {id}");
 
 			// default to linkSource=MANUAL here
 			// because we only want to return the records that were annotated by a human
