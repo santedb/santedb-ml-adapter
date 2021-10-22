@@ -20,7 +20,6 @@
  */
 
 using SanteDB.ML.Adapter.Models;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace SanteDB.ML.Adapter.Services
