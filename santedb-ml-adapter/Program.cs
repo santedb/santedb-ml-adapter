@@ -19,6 +19,7 @@
  * Date: 2021-8-11
  */
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -83,18 +84,27 @@ namespace SanteDB.ML.Adapter
 
 				applicationLifetime.ApplicationStarted.Register(() =>
 				{
+					var kestrelConfiguration = host.Services.GetService<IConfiguration>()?.GetSection("Kestrel");
+
+					logger.LogInformation($"Kestrel listening on: {kestrelConfiguration?["Endpoints:Http:Url"]} and {kestrelConfiguration?["Endpoints:Https:Url"]}");
+
 					stopwatch.Stop();
+
 					logger.LogInformation($"Service started successfully in {stopwatch.Elapsed.TotalMilliseconds} ms");
+
+					stopwatch.Reset();
 				});
 
 				applicationLifetime.ApplicationStopping.Register(() =>
 				{
+					stopwatch.Start();
 					logger.LogInformation("Service stopping");
 				});
 
 				applicationLifetime.ApplicationStopped.Register(() =>
 				{
-					logger.LogInformation("Service stopped");
+					stopwatch.Stop();
+					logger.LogInformation($"Service stopped successfully in {stopwatch.Elapsed.TotalMilliseconds} ms");
 				});
 
 
@@ -133,14 +143,10 @@ namespace SanteDB.ML.Adapter
 				.ConfigureWebHostDefaults(webBuilder =>
 				{
 					webBuilder.UseSerilog((hostingContext, loggerConfiguration) => loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration));
-
-					if (webBuilder.GetSetting("Environment") != "Development")
+					webBuilder.UseKestrel((context, options) =>
 					{
-						webBuilder.UseKestrel((context, options) =>
-						{
-							options.Configure(context.Configuration.GetSection("Kestrel"));
-						});
-					}
+						options.Configure(context.Configuration.GetSection("Kestrel"));
+					});
 
 					webBuilder.UseStartup<Startup>();
 				});
