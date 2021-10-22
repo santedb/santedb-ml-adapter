@@ -41,7 +41,7 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		/// <summary>
 		/// The FHIR media type.
 		/// </summary>
-		private const string FhirMediaType = "application/fhir+xml";
+		private const string FhirMediaType = "application/fhir+json";
 
 		/// <summary>
 		/// The match key.
@@ -155,7 +155,7 @@ namespace SanteDB.ML.Adapter.Services.Impl
 
 			var responseMessage = await response.Content.ReadAsStringAsync();
 
-			var parser = new FhirXmlParser(ParserSettings.CreateDefault());
+			var parser = new FhirJsonParser(ParserSettings.CreateDefault());
 
 			return parser.Parse<Parameters>(responseMessage);
 		}
