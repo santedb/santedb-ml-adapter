@@ -118,17 +118,17 @@ namespace SanteDB.ML.Adapter.Services.Impl
 			var groundTruthScores = new List<GroundTruthScores>();
 
 			var offset = 0;
-			var parameters = await this.QueryGroundTruthScoresAsync(id, offset, 100, matchKey);
+			var parameters = await this.QueryGroundTruthScoresAsync(id, offset, 1000, matchKey);
 
 			groundTruthScores.Add(this.fhirMapService.MapGroundTruthScores(parameters));
 
 			// keep fetching as long as we have a "next" link
-			//while (parameters.Parameter.Any(c => c.Name == "next"))
-			//{
-			//	offset += 1000;
-			//	parameters = await this.QueryGroundTruthScoresAsync(id, offset, 1000, matchKey);
-			//	groundTruthScores.Add(this.fhirMapService.MapGroundTruthScores(parameters));
-			//}
+			while (parameters.Parameter.Any(c => c.Name == "next"))
+			{
+				offset += 1000;
+				parameters = await this.QueryGroundTruthScoresAsync(id, offset, 1000, matchKey);
+				groundTruthScores.Add(this.fhirMapService.MapGroundTruthScores(parameters));
+			}
 
 			return new GroundTruthScores(groundTruthScores);
 		}
@@ -148,8 +148,8 @@ namespace SanteDB.ML.Adapter.Services.Impl
 			// default to linkSource=MANUAL here
 			// because we only want to return the records that were annotated by a human
 			// therefore returning ground truth
-			//var response = await client.GetAsync(new Uri($"{this.configuration.GetValue<string>("SanteDBEndpoint")}/fhir/Patient/$mdm-query-links?_configurationName={id}&linkSource=MANUAL&_count={count}&_offset={offset}"));
-			var response = await client.GetAsync(new Uri($"{this.configuration.GetValue<string>("SanteDBEndpoint")}/fhir/Patient/$mdm-query-links?_configurationName={id}&_count={count}&_offset={offset}&matchResult={matchResult}"));
+			var response = await client.GetAsync(new Uri($"{this.configuration.GetValue<string>("SanteDBEndpoint")}/fhir/Patient/$mdm-query-links?_configurationName={id}&linkSource=MANUAL&_count={count}&_offset={offset}&matchResult={matchResult}"));
+			//var response = await client.GetAsync(new Uri($"{this.configuration.GetValue<string>("SanteDBEndpoint")}/fhir/Patient/$mdm-query-links?_configurationName={id}&_count={count}&_offset={offset}&matchResult={matchResult}"));
 
 			response.EnsureSuccessStatusCode();
 
