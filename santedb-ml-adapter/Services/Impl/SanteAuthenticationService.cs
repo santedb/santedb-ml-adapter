@@ -105,7 +105,6 @@ namespace SanteDB.ML.Adapter.Services.Impl
 				throw new InvalidOperationException("Unable to authenticate against the SanteDB service");
 			}
 
-
 			var accessToken = content["access_token"]?.Value<string>();
 
 			if (string.IsNullOrEmpty(accessToken) || string.IsNullOrWhiteSpace(accessToken))
