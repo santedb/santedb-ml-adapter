@@ -24,6 +24,8 @@ using Microsoft.Extensions.Logging;
 using SanteDB.ML.Adapter.Models;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -84,6 +86,18 @@ namespace SanteDB.ML.Adapter.Services.Impl
 				throw new ArgumentNullException(nameof(id), "Value cannot be null");
 			}
 
+			var document = await this.GetMatchConfigurationRawAsync(id);
+
+			return MapToMatchConfiguration(document);
+		}
+
+		/// <summary>
+		/// Gets a match configuration asynchronously.
+		/// </summary>
+		/// <param name="id">The id of the match configuration.</param>
+		/// <returns>Returns the match configuration.</returns>
+		private async Task<XmlDocument> GetMatchConfigurationRawAsync(string id)
+		{
 			var accessToken = await this.authenticationService.AuthenticateAsync();
 
 			var client = this.httpClientFactory.CreateClient();
@@ -108,16 +122,30 @@ namespace SanteDB.ML.Adapter.Services.Impl
 
 			this.logger.LogDebug($"Match config retrieved: {id}");
 
+			return document;
+		}
+
+		/// <summary>
+		/// Maps to match configuration.
+		/// </summary>
+		/// <param name="document">The document.</param>
+		/// <returns>Returns the mapped match configuration.</returns>
+		/// <exception cref="InvalidOperationException">Match config does not have a root element</exception>
+		/// <exception cref="InvalidOperationException">Match config does not have a scoring section</exception>
+		/// <exception cref="InvalidOperationException">Match configuration element does not have a 'matchThreshold' attribute</exception>
+		/// <exception cref="InvalidOperationException">Match configuration element does not have a 'nonmatchThreshold' attribute</exception>
+		private static MatchConfiguration MapToMatchConfiguration(XmlDocument document)
+		{
 			if (document.DocumentElement == null)
 			{
-				throw new InvalidOperationException($"Match config: {id} does not have a root element");
+				throw new InvalidOperationException("Match config does not have a root element");
 			}
 
 			var scoringElement = document.DocumentElement.ChildNodes.Cast<XmlElement>().FirstOrDefault(element => element.Name == "scoring");
 
 			if (scoringElement == null)
 			{
-				throw new InvalidOperationException($"Match config: {id} does not have a scoring section");
+				throw new InvalidOperationException("Match config does not have a scoring section");
 			}
 
 			var attributeNodes = scoringElement.ChildNodes.Cast<XmlElement>().Where(c => c.Name == "attribute").Select(c => c.Attributes);
@@ -131,7 +159,7 @@ namespace SanteDB.ML.Adapter.Services.Impl
 					U = Convert.ToDouble(x["u"]?.Value ?? throw new InvalidOperationException("Attribute element does not have a 'u' attribute")),
 					Bounds = new List<double>
 					{
-						0, 1
+						1e-8, 1 - 1e-8
 					}
 
 				}).ToList()
@@ -151,11 +179,116 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		/// <returns>Returns the match configuration.</returns>
 		public async Task<MatchConfiguration> UpdateMatchConfigurationAsync(string id, MatchConfiguration matchConfiguration)
 		{
-			await Task.Yield();
-			return matchConfiguration;
+			var remoteConfiguration = await this.GetMatchConfigurationRawAsync(id);
 
-			// TODO: get config from SanteDB, update match attributes, PUT MatchConfiguration to SanteDB
-			//throw new NotImplementedException();
+			if (remoteConfiguration.DocumentElement == null)
+			{
+				throw new InvalidOperationException("Match config does not have a root element");
+			}
+
+			// update the match and nonmatch thresholds
+			remoteConfiguration.DocumentElement.Attributes["matchThreshold"].Value = matchConfiguration.MatchThreshold.ToString(CultureInfo.InvariantCulture);
+			remoteConfiguration.DocumentElement.Attributes["nonmatchThreshold"].Value = matchConfiguration.NonMatchThreshold.ToString(CultureInfo.InvariantCulture);
+
+			var scoringElement = remoteConfiguration.DocumentElement.ChildNodes.Cast<XmlElement>().FirstOrDefault(element => element.Name == "scoring");
+
+			if (scoringElement == null)
+			{
+				throw new InvalidOperationException("Match config does not have a scoring section");
+			}
+
+			var attributeNodes = scoringElement.ChildNodes.Cast<XmlElement>().Where(c => c.Name == "attribute").Select(c => c.Attributes);
+
+			// find each attribute based on property name and update the M and U values accordingly
+			matchConfiguration.MatchAttributes.ForEach(matchAttribute =>
+			{
+				// HACK
+				attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key)["m"].Value = matchAttribute.M.ToString();
+				attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key)["u"].Value = matchAttribute.U.ToString();
+
+				// (this.m_m.Value / this.m_u.Value).Ln() / (2.0d).Ln()
+				if (attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key)["matchWeight"] != null)
+				{
+					attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key).Append(remoteConfiguration.CreateAttribute("matchWeight")).Value = Convert.ToString((matchAttribute.M / matchAttribute.U).Ln() / (2.0d).Ln(), CultureInfo.InvariantCulture);
+				}
+				else
+				{
+					attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key)["matchWeight"].Value = Convert.ToString((matchAttribute.M / matchAttribute.U).Ln() / (2.0d).Ln(), CultureInfo.InvariantCulture);
+				}
+
+				// HACK
+				if (attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key)["nonMatchWeight"] != null)
+				{
+					attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key).Append(remoteConfiguration.CreateAttribute("nonMatchWeight")).Value = Convert.ToString(((1 - matchAttribute.M) / (1 - matchAttribute.U)).Ln() / (2.0d).Ln(), CultureInfo.InvariantCulture);
+				}
+				else
+				{
+					attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key)["nonMatchWeight"].Value = Convert.ToString(((1 - matchAttribute.M) / (1 - matchAttribute.U)).Ln() / (2.0d).Ln(), CultureInfo.InvariantCulture);
+				}
+			});
+
+			// PUT the updated config to SanteDB
+
+			var accessToken = await this.authenticationService.AuthenticateAsync();
+
+			var client = this.httpClientFactory.CreateClient();
+
+			if (client.DefaultRequestHeaders.Accept.All(c => c.MediaType != "application/xml"))
+			{
+				client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xml"));
+			}
+
+			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+			var memoryStream = new MemoryStream();
+
+			remoteConfiguration.Save(memoryStream);
+
+			await memoryStream.FlushAsync();
+			memoryStream.Position = 0;
+
+			var content = new StreamContent(memoryStream);
+
+			content.Headers.ContentType = new MediaTypeHeaderValue("application/xml");
+
+			var response = await client.PutAsync(new Uri($"{this.configuration.GetValue<string>("SanteDBEndpoint")}/ami/MatchConfiguration/{id}"), content);
+
+			response.EnsureSuccessStatusCode();
+
+			// re-retrieve and return the most recent copy of the match configuration from SanteDB
+			return await this.GetMatchConfigurationAsync(id);
+		}
+	}
+
+	/// <summary>
+	/// Represents mathematical extensions for natural logarithms.
+	/// </summary>
+	public static class MathExtensions
+	{
+		/// <summary>
+		/// The LN function (1/log(source)).
+		/// </summary>
+		/// <param name="source">The source value.</param>
+		/// <returns>Returns the calculated value.</returns>
+		public static double Ln(this double source)
+		{
+			return Math.Log(source, Math.E);
+		}
+
+
+		/// <summary>
+		/// The LN function (1/log(source))
+		/// </summary>
+		/// <param name="source">The source value.</param>
+		/// <returns>Returns the calculated value.</returns>
+		public static double Ln(this double? source)
+		{
+			if (source == null)
+			{
+				throw new ArgumentNullException(nameof(source), "Value cannot be null");
+			}
+
+			return Math.Log(source.Value, Math.E);
 		}
 	}
 }
