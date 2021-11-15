@@ -34,10 +34,10 @@ using System.Xml;
 
 namespace SanteDB.ML.Adapter.Services.Impl
 {
-	/// <summary>
-	/// Represents a SanteDB match configuration service.
-	/// </summary>
-	public class SanteMatchConfigurationService : ISanteMatchConfigurationService
+    /// <summary>
+    /// Represents a SanteDB match configuration service.
+    /// </summary>
+    public class SanteMatchConfigurationService : ISanteMatchConfigurationService
 	{
 		/// <summary>
 		/// The authentication service.
@@ -179,6 +179,8 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		/// <returns>Returns the match configuration.</returns>
 		public async Task<MatchConfiguration> UpdateMatchConfigurationAsync(string id, MatchConfiguration matchConfiguration)
 		{
+			this.logger.LogDebug($"Config updates: {string.Join(", ", matchConfiguration.MatchAttributes.Select(c => new { c.Key, c.M, c.U }))}");
+
 			var remoteConfiguration = await this.GetMatchConfigurationRawAsync(id);
 
 			if (remoteConfiguration.DocumentElement == null)
@@ -197,39 +199,18 @@ namespace SanteDB.ML.Adapter.Services.Impl
 				throw new InvalidOperationException("Match config does not have a scoring section");
 			}
 
-			var attributeNodes = scoringElement.ChildNodes.Cast<XmlElement>().Where(c => c.Name == "attribute").Select(c => c.Attributes);
+            var attributeNodes = scoringElement.ChildNodes.Cast<XmlElement>().Where(c => c.Name == "attribute").Select(c => c.Attributes);
 
-			// find each attribute based on property name and update the M and U values accordingly
-			matchConfiguration.MatchAttributes.ForEach(matchAttribute =>
-			{
-				// HACK
-				attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key)["m"].Value = matchAttribute.M.ToString();
-				attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key)["u"].Value = matchAttribute.U.ToString();
+            // find each attribute based on property name and update the M and U values accordingly
+            matchConfiguration.MatchAttributes.ForEach(matchAttribute =>
+            {
+                attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key)["m"].Value = matchAttribute.M.ToString();
+                attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key)["u"].Value = matchAttribute.U.ToString();
+            });
 
-				// (this.m_m.Value / this.m_u.Value).Ln() / (2.0d).Ln()
-				if (attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key)["matchWeight"] != null)
-				{
-					attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key).Append(remoteConfiguration.CreateAttribute("matchWeight")).Value = Convert.ToString((matchAttribute.M / matchAttribute.U).Ln() / (2.0d).Ln(), CultureInfo.InvariantCulture);
-				}
-				else
-				{
-					attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key)["matchWeight"].Value = Convert.ToString((matchAttribute.M / matchAttribute.U).Ln() / (2.0d).Ln(), CultureInfo.InvariantCulture);
-				}
+            // PUT the updated config to SanteDB
 
-				// HACK
-				if (attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key)["nonMatchWeight"] != null)
-				{
-					attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key).Append(remoteConfiguration.CreateAttribute("nonMatchWeight")).Value = Convert.ToString(((1 - matchAttribute.M) / (1 - matchAttribute.U)).Ln() / (2.0d).Ln(), CultureInfo.InvariantCulture);
-				}
-				else
-				{
-					attributeNodes.FirstOrDefault(c => c["property"].Value == matchAttribute.Key)["nonMatchWeight"].Value = Convert.ToString(((1 - matchAttribute.M) / (1 - matchAttribute.U)).Ln() / (2.0d).Ln(), CultureInfo.InvariantCulture);
-				}
-			});
-
-			// PUT the updated config to SanteDB
-
-			var accessToken = await this.authenticationService.AuthenticateAsync();
+            var accessToken = await this.authenticationService.AuthenticateAsync();
 
 			var client = this.httpClientFactory.CreateClient();
 

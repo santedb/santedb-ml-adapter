@@ -40,10 +40,10 @@ using System.Threading.Tasks;
 
 namespace SanteDB.ML.Adapter
 {
-	/// <summary>
-	/// Represents the startup configuration settings for the application.
-	/// </summary>
-	public class Startup
+    /// <summary>
+    /// Represents the startup configuration settings for the application.
+    /// </summary>
+    public class Startup
 	{
 		/// <summary>
 		/// The web host webHostEnvironment.
@@ -68,7 +68,7 @@ namespace SanteDB.ML.Adapter
 
 			var environment = this.Configuration.GetValue<string>("Environment");
 
-			switch (environment)
+            switch (environment)
 			{
 				case "Development":
 #if !DEBUG
