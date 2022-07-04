@@ -27,14 +27,15 @@ using SanteDB.ML.Adapter.Services;
 using System;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace SanteDB.ML.Adapter.Controllers
 {
-	/// <summary>
-	/// Represents a match configuration controller.
-	/// </summary>
-	[ApiController]
+    /// <summary>
+    /// Represents a match configuration controller.
+    /// </summary>
+    [ApiController]
 	[Route("matchConfig")]
 	[Authorize(AuthenticationSchemes = "Basic")]
 	public class MatchConfigurationController : ControllerBase
@@ -52,8 +53,8 @@ namespace SanteDB.ML.Adapter.Controllers
 			AllowTrailingCommas = false,
 			IgnoreReadOnlyProperties = true,
 			ReadCommentHandling = JsonCommentHandling.Skip,
-			IgnoreNullValues = true,
-			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+			DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 			WriteIndented = true
 		};
 
