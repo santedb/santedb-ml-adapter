@@ -40,10 +40,10 @@ using System.Threading.Tasks;
 
 namespace SanteDB.ML.Adapter
 {
-    /// <summary>
-    /// Represents the startup configuration settings for the application.
-    /// </summary>
-    public class Startup
+	/// <summary>
+	/// Represents the startup configuration settings for the application.
+	/// </summary>
+	public class Startup
 	{
 		/// <summary>
 		/// The web host webHostEnvironment.
@@ -206,7 +206,7 @@ namespace SanteDB.ML.Adapter
 		/// <param name="environment">The webHostEnvironment.</param>
 		public void Configure(IApplicationBuilder app, IWebHostEnvironment environment)
 		{
-			var logger = app.ApplicationServices.GetService<ILogger<Startup>>();
+			var logger = app.ApplicationServices.GetService<ILogger<Startup>>() ?? throw new InvalidOperationException("Unable to locate logger instance");
 
 			if (environment.IsDevelopment())
 			{
@@ -257,9 +257,9 @@ namespace SanteDB.ML.Adapter
 
 			if (!environment.IsDevelopment())
 			{
-				//logger.LogInformation($"Environment is {environment.EnvironmentName}, will enable HTTPS redirection");
+				logger.LogInformation($"Environment is {environment.EnvironmentName}, will enable HTTPS redirection");
 
-				//app.UseHttpsRedirection();
+				app.UseHttpsRedirection();
 			}
 
 			if (environment.IsDevelopment())
