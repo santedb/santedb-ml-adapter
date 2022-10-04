@@ -30,6 +30,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace SanteDB.ML.Adapter.Services.Impl
 {
@@ -68,10 +69,15 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		/// </summary>
 		private readonly IHttpClientFactory httpClientFactory;
 
-		/// <summary>
-		/// The FHIR map service.
-		/// </summary>
-		private readonly ISanteFhirMapService fhirMapService;
+        /// <summary>
+        /// The logger.
+        /// </summary>
+        private readonly ILogger<SanteGroundTruthService> logger;
+
+        /// <summary>
+        /// The FHIR map service.
+        /// </summary>
+        private readonly ISanteFhirMapService fhirMapService;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="SanteGroundTruthService" /> class.
@@ -80,13 +86,15 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		/// <param name="httpClientFactory">The HTTP client factory.</param>
 		/// <param name="authenticationService">The authentication service.</param>
 		/// <param name="fhirMapService">The FHIR map service.</param>
-		public SanteGroundTruthService(IConfiguration configuration, IHttpClientFactory httpClientFactory, ISanteAuthenticationService authenticationService, ISanteFhirMapService fhirMapService)
+		/// <param name="logger">The logger.</param>
+		public SanteGroundTruthService(IConfiguration configuration, IHttpClientFactory httpClientFactory, ISanteAuthenticationService authenticationService, ISanteFhirMapService fhirMapService, ILogger<SanteGroundTruthService> logger)
 		{
 			this.authenticationService = authenticationService;
 			this.configuration = configuration;
 			this.httpClientFactory = httpClientFactory;
 			this.fhirMapService = fhirMapService;
-		}
+            this.logger = logger;
+        }
 
 		/// <summary>
 		/// Gets ground truth scores asynchronously.
@@ -97,14 +105,16 @@ namespace SanteDB.ML.Adapter.Services.Impl
 		{
 			var stopwatch = new Stopwatch();
 
+			this.logger.LogDebug($"Query start time: {DateTime.Now}");
 			stopwatch.Start();
 
 			var nonMatches = await this.GetGroundTruthScoresInternalAsync(id, NonMatchKey);
 			var matches = await this.GetGroundTruthScoresInternalAsync(id, MatchKey);
 
 			stopwatch.Stop();
+            this.logger.LogDebug($"Query end time: {DateTime.Now}");
 
-			Console.WriteLine($"Elapsed: {stopwatch.Elapsed.TotalMilliseconds}");
+            this.logger.LogDebug($"Elapsed: {stopwatch.Elapsed.TotalMilliseconds}");
 
 			return new GroundTruthScores(new List<GroundTruthScores>
 			{
@@ -138,7 +148,20 @@ namespace SanteDB.ML.Adapter.Services.Impl
 			var accessToken = await this.authenticationService.AuthenticateAsync();
 			var client = this.httpClientFactory.CreateClient();
 
-			if (client.DefaultRequestHeaders.Accept.All(c => c.MediaType != FhirMediaType))
+            try
+            {
+                var timeout = this.configuration.GetValue<double>("SanteDBEndpointTimeout");
+
+                client.Timeout = TimeSpan.FromHours(timeout / 3600);
+                this.logger.LogInformation($"Using timeout of: {timeout}");
+            }
+            catch (InvalidOperationException)
+            {
+                this.logger.LogError("Unable to parse SanteDBEndpointTimeout value from configuration, defaulting to 72 hours");
+                client.Timeout = TimeSpan.FromHours(72);
+            }
+
+            if (client.DefaultRequestHeaders.Accept.All(c => c.MediaType != FhirMediaType))
 			{
 				client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(FhirMediaType));
 			}

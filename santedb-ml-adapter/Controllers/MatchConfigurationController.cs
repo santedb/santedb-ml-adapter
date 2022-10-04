@@ -203,6 +203,7 @@ namespace SanteDB.ML.Adapter.Controllers
 				};
 			}
 
+			this.logger.LogDebug($"Returning response to client: {DateTime.Now}");
 			return result;
 		}
 
