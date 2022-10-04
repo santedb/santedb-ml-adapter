@@ -142,8 +142,7 @@ namespace SanteDB.ML.Adapter
 			var host = Host.CreateDefaultBuilder(args)
 				.ConfigureWebHostDefaults(webBuilder =>
 				{
-					webBuilder.UseSerilog((hostingContext, loggerConfiguration) => loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration));
-					webBuilder.UseKestrel((context, options) =>
+                    webBuilder.UseKestrel((context, options) =>
 					{
 						options.Configure(context.Configuration.GetSection("Kestrel"));
 					});
@@ -151,7 +150,9 @@ namespace SanteDB.ML.Adapter
 					webBuilder.UseStartup<Startup>();
 				});
 
-			return host;
+            host.UseSerilog((hostingContext, loggerConfiguration) => loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration));
+
+            return host;
 		}
 	}
 }
